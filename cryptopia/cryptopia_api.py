@@ -11,7 +11,8 @@ try:
     import secrets
     haveSecrets = True
 except ImportError:
-    import os
+    import random
+    import string
     haveSecrets = False
 
 class Api(object):
@@ -176,7 +177,7 @@ class Api(object):
         if haveSecrets:
             nonce = str(time.time()) + secrets.token_urlsafe(16)
         else:
-            nonce = str(time.time()) + os.urandom(16)
+            nonce = str(time.time()) +  ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16))
         md5 = hashlib.md5()
         md5.update(post_data.encode('utf-8'))
         rcb64 = base64.b64encode(md5.digest()).decode('utf-8')
