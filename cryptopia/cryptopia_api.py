@@ -7,7 +7,12 @@ import hmac
 import hashlib
 import base64
 import requests
-import secrets
+try:
+    import secrets
+    haveSecrets = True
+except ImportError:
+    import os
+    haveSecrets = False
 
 class Api(object):
     """ Represents a wrapper for cryptopia API """
@@ -168,7 +173,10 @@ class Api(object):
 
     def secure_headers(self, url, post_data):
         """ Creates secure header for cryptopia private api. """
-        nonce = str(time.time()) + secrets.token_urlsafe(16)
+        if haveSecrets:
+            nonce = str(time.time()) + secrets.token_urlsafe(16)
+        else:
+            nonce = str(time.time()) + os.urandom(16)
         md5 = hashlib.md5()
         md5.update(post_data.encode('utf-8'))
         rcb64 = base64.b64encode(md5.digest()).decode('utf-8')
