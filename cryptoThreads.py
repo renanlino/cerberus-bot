@@ -33,7 +33,8 @@ class operator(threading.Thread):
 
         tradeMonitor = orderMonitor(self.api_key, self.api_secret, self.marketCode)
         self.threads.append(tradeMonitor)
-        tradeMonitor.start()
+        if LIVE:
+            tradeMonitor.start()
 
         print("[+] Colocando ordem: BUY %.8f %s (rate: %.8f)" %(self.numCoins, self.coinCode, self.buyRate))
         if self.LIVE:

@@ -6,7 +6,8 @@ from cx_Freeze import setup, Executable
 
 
 # Dependencies are automatically detected, but it might need fine tuning.
-build_exe_options = {"packages": ["os","idna"], "excludes": ["tkinter"]}
+build_exe_options = {"packages": ["os","idna"], "excludes": ["tkinter"],
+'include_msvcr': True}
 
 # GUI applications require a different base on Windows (the default is for a
 # console application).
