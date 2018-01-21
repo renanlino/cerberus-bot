@@ -21,6 +21,10 @@ class operator(threading.Thread):
         self.marketID = marketID
         self.stopRunning = threading.Event()
 
+    def kill_all(self):
+        for t in self.threads:
+            t.stopRunning.set()
+
     def run(self):
 
         mktUpdater = marketUpdate(self.api_key, self.api_secret, self.marketID)
@@ -36,20 +40,22 @@ class operator(threading.Thread):
             trade, error = self.exchange.submit_trade(self.marketCode, 'Buy', self.buyRate, self.numCoins)
             if error is not None:
                 print("\t[X] " + error)
+                self.kill_all()
                 return
             else:
                 print("\t[!] Ordem lançada")
 
         while(not self.stopRunning.is_set()):
-            trade = tradeMonitor.tradeQueue.get()
-            print("[!] Comprou %f%s @ %f%s" %(trade[0], self.coinCode, trade[1], self.BASE_COIN))
-            sellRate = trade[1]*self.targetRate
-            dumper = seller(self.api_key, self.api_secret, self.marketCode, trade[0], sellRate)
-            self.threads.append(dumper)
-            dumper.start()
+            if not tradeMonitor.tradeQueue.empty():
+                trade = tradeMonitor.tradeQueue.get()
+                print("[!] Comprou %f%s @ %f%s" %(trade[0], self.coinCode, trade[1], self.BASE_COIN))
+                sellRate = trade[1]*self.targetRate
+                dumper = seller(self.api_key, self.api_secret, self.marketCode, trade[0], sellRate)
+                self.threads.append(dumper)
+                dumper.start()
 
-        for t in self.threads:
-            t.stopRunning.set()
+        self.kill_all()
+        return
 
 
 class marketsUpdate(threading.Thread):
@@ -76,7 +82,7 @@ class marketsUpdate(threading.Thread):
             else:
                 print("[!] Erro ao obter mercados: ", end="")
                 print(error)
-            time.sleep(1)
+            time.sleep(0.5)
         return
 
 class marketUpdate(threading.Thread):

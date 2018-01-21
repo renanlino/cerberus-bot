@@ -8,6 +8,14 @@ import copy
 from datetime import datetime
 import signal
 
+def signal_handler(signal, frame):
+        print('Saindo')
+        for t in threads:
+            t.stopRunning.set()
+        sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+
 def readSecrets():
     try:
         secretsFile = open("secrets.json", "r")
@@ -27,6 +35,9 @@ def secretsAssistant():
     print("Esse assistente vai te guiar pelo processo")
     print("de configuração da API da Cryptopia.")
     print()
+    print("VOCÊ PRECISA EXECUTAR ESTE PROGRAMA COMO ADMINISTRADOR")
+    print("ANTES DE CONTINUAR!")
+    print()
     print("1) Faça login na sua conta pelo link https://www.cryptopia.co.nz/Login")
     print("2) Acesse as configurações de segurança em https://www.cryptopia.co.nz/Security")
     print("3) Digite seu PIN e clique em Unlock")
@@ -44,6 +55,7 @@ def secretsAssistant():
     print("Mantenha esse arquivo em segurança e jamais compartilhe")
     print("seu conteúdo!")
     input("Pressione ENTER para salvar e continuar")
+    print()
 
     try:
         secretsFile = open("secrets.json", "w")
@@ -96,6 +108,9 @@ def waitForSignal(pumpBalance, pumpRate, targetRate):
     mktsUpdater.lock.release()
     mktsUpdater.stopRunning.set()
 
+    while True:
+        time.sleep(1)
+
 def setup():
 
     global LIVE
@@ -144,27 +159,20 @@ BASE_COIN = "BTC"
 EX_FEE = 0.2/100
 threads = []
 
-if "-check" in sys.argv:
-    checkPump = True
-else:
-    checkPump = False
-
 secrets = readSecrets()
-if secrets == {}:
-    sys.exit(1)
+if secrets != {}:
+    print("[+] Configurando credenciais de acesso...")
+    api_key = secrets["cryptopia"]["api_key"]
+    api_secret = secrets["cryptopia"]["api_secret"]
 
-print("[+] Configurando credenciais de acesso...")
-api_key = secrets["cryptopia"]["api_key"]
-api_secret = secrets["cryptopia"]["api_secret"]
+    exchange = Api(api_key, api_secret)
 
-exchange = Api(api_key, api_secret)
+    mktsUpdater = marketsUpdate(api_key, api_secret)
+    threads.append(mktsUpdater)
+    mktsUpdater.start()
 
-mktsUpdater = marketsUpdate(api_key, api_secret)
-threads.append(mktsUpdater)
-mktsUpdater.start()
+    print("[+] Obtendo mercados...")
+    while(not mktsUpdater.success.is_set()):
+        time.sleep(0.1)
 
-print("[+] Obtendo mercados...")
-while(not mktsUpdater.success.is_set()):
-    time.sleep(0.1)
-
-setup()
+    setup()
