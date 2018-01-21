@@ -35,7 +35,7 @@ class operator(threading.Thread):
         self.threads.append(tradeMonitor)
         tradeMonitor.start()
 
-        print("[+] Colocando ordem: BUY %f %s (rate: %f)" %(self.numCoins, self.coinCode, self.buyRate))
+        print("[+] Colocando ordem: BUY %.7f %s (rate: %.7f)" %(self.numCoins, self.coinCode, self.buyRate))
         if self.LIVE:
             trade, error = self.exchange.submit_trade(self.marketCode, 'Buy', self.buyRate, self.numCoins)
             if error is not None:
@@ -48,7 +48,7 @@ class operator(threading.Thread):
         while(not self.stopRunning.is_set()):
             if not tradeMonitor.tradeQueue.empty():
                 trade = tradeMonitor.tradeQueue.get()
-                print("[!] Comprou %f%s @ %f%s" %(trade[0], self.coinCode, trade[1], self.BASE_COIN))
+                print("[!] Comprou %.7f %s @ %.7f %s" %(trade[0], self.coinCode, trade[1], self.BASE_COIN))
                 sellRate = trade[1]*self.targetRate
                 dumper = seller(self.api_key, self.api_secret, self.marketCode, trade[0], sellRate)
                 self.threads.append(dumper)
@@ -137,7 +137,7 @@ class seller(threading.Thread):
       self.stopRunning = threading.Event()
 
     def run(self):
-        print("[+] Colocando ordem: SELL %f %s (rate: %f)" %(self.sellCoins, self.codeSplit[0], self.sellRate))
+        print("[+] Colocando ordem: SELL %.7f %s (rate: %.7f)" %(self.sellCoins, self.codeSplit[0], self.sellRate))
         trade, error = self.exchange.submit_trade(self.mktCode, 'Sell', self.sellRate, self.sellCoins)
         if error is not None:
             print("\t[X] " + error)
