@@ -94,9 +94,9 @@ def waitForSignal(pumpBalance, pumpRate, targetRate):
 
         marketID = str(mkt["TradePairId"])
         print(marketCode)
-        print("\tASK: %f" %(mkt["AskPrice"]))
-        print("\tBID: %f" %(mkt["BidPrice"]))
-        print("\tCNG: %.2f%%" %(mkt["Change"]))
+        print("\tASK: %.8f" %(mkt["AskPrice"]))
+        print("\tBID: %.8f" %(mkt["BidPrice"]))
+        print("\tCNG: %+.2f%%" %(mkt["Change"]))
 
         buyRate = mkt["AskPrice"]*pumpRate
         numCoins = pumpBalance / (len(coinCodes)*buyRate)
