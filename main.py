@@ -7,6 +7,7 @@ import threading
 import copy
 from datetime import datetime
 import signal
+import requests
 
 def signal_handler(signal, frame):
         print('Saindo')
@@ -15,6 +16,61 @@ def signal_handler(signal, frame):
         sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
+
+def activationAssistant():
+    print("Esse assistente vai te guiar pela ativação")
+    print("do bot.")
+    print()
+    print("VOCÊ PRECISA EXECUTAR ESTE PROGRAMA COMO ADMINISTRADOR")
+    print("ANTES DE CONTINUAR!")
+    print()
+    key = input("Cole o valor da chave de ativação recebida: ")
+    print()
+    print("[!][!][!] ATENÇÃO [!][!][!]")
+    print("Este programa vai criar um arquivo local com a sua")
+    print("chave de ativação.")
+    print("Mantenha esse arquivo em segurança e jamais compartilhe")
+    print("seu conteúdo!")
+    input("Pressione ENTER para salvar e continuar")
+    print()
+
+    try:
+        activationFile = open("key.json", "w")
+    except IOError:
+        print("[X] Não foi possível gravar os dados de acesso!")
+
+    activationObj = {"key":key}
+    json.dump(activationObj, activationFile)
+    activationFile.close()
+
+def runActivation():
+    try:
+        activationFile = open("key.json", "r")
+    except IOError:
+        print("[X] Erro ao abrir arquivo key.json")
+        activationAssistant()
+        return runActivation()
+
+    try:
+        activationObj = json.load(activationFile)
+    except ValueError:
+        print("[X] Erro ao parsear o conteúdo de secrets.json")
+        sys.exit(1)
+
+    activationFile.close()
+
+    try:
+        r = requests.post("https://crypto-backend.herokuapp.com/keys/", data=activationObj)
+    except IOError:
+        print("[X] Erro ao acessar a rede para ativação.")
+        sys.exit(1)
+
+    if r.status_code != 200:
+        print("[X] Falha na ativação.")
+        print(r)
+        sys.exit(1)
+    else:
+        return
 
 def readSecrets():
     try:
@@ -158,6 +214,8 @@ LIVE = False
 BASE_COIN = "BTC"
 EX_FEE = 0.2/100
 threads = []
+
+runActivation()
 
 secrets = readSecrets()
 if secrets != {}:
