@@ -190,18 +190,23 @@ def setup():
         LIVE = True
         print("\t[!] MODO DE TESTES DESATIVADO")
 
-    pumpBalance = float(input("Digite O VALOR PERCENTUAL que será aplicado no pump: "))/100
+    pumpBalance = input("Digite O VALOR PERCENTUAL que será investido no pump: ")
+    pumpBalance = pumpBalance.replace("%","").replace(" ","").replace(",",".")
+    pumpBalance = float(pumpBalance)/100
+
     pumpBalance = balance_obj["Available"]*pumpBalance*(1-EX_FEE)
-    print("\tVocê entrará no pump com %f %s (descontadas as taxas)" %(pumpBalance, BASE_COIN))
+    print("\tVocê entrará no pump com %.8f %s (descontadas as taxas)" %(pumpBalance, BASE_COIN))
 
     pumpRate = input("ACRÉSCIMO PERCENTUAL sobre o preço de compra (padrão = 0): ")
     if pumpRate == "":
         pumpRate = 0
+    pumpRate = pumpRate.replace("%","").replace(" ","").replace(",",".")
     pumpRate = 1 + float(pumpRate)/100
 
     targetRate = input("ACRÉSCIMO PERCENTUAL ALVO (padrão = 30): ")
     if targetRate == "":
         targetRate = 30
+    targetRate = targetRate.replace("%","").replace(" ","").replace(",",".")
     targetRate = 1 + float(targetRate)/100
 
     waitForSignal(pumpBalance, pumpRate, targetRate)

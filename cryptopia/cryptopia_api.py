@@ -13,6 +13,8 @@ except ImportError:
     import string
     haveSecrets = False
 
+MAX_TRY = 3
+
 class Api(object):
 
     def __init__(self, key, secret):
@@ -25,8 +27,7 @@ class Api(object):
                         'GetTradeHistory', 'GetTransactions', 'SubmitTrade',
                         'CancelTrade', 'SubmitTip', 'SubmitWithdraw', 'SubmitTransfer']
 
-    def api_query(self, feature_requested, get_parameters=None, post_parameters=None):
-        time.sleep(1)
+    def api_query(self, feature_requested, get_parameters=None, post_parameters=None, retry=0):
         if feature_requested in self.private:
             url = "https://www.cryptopia.co.nz/Api/" + feature_requested
             post_data = json.dumps(post_parameters)
@@ -37,8 +38,19 @@ class Api(object):
                 try:
                     req.raise_for_status()
                 except requests.exceptions.RequestException as ex:
-                    return None, "Status Code : " + str(ex)
-            req = req.json()
+                    retry += 1
+                    if retry <= MAX_TRY:
+                        return self.api_query(feature_requested, get_parameters=get_parameters, post_parameters=post_parameters, retry=retry)
+                    else:
+                        return None, "Status Code : " + str(ex)
+            try:
+                req = req.json()
+            except ValueError:
+                retry += 1
+                if retry <= MAX_TRY:
+                    return self.api_query(feature_requested, get_parameters=get_parameters, post_parameters=post_parameters, retry=retry)
+                else:
+                    return None, "Server Response : " + req.text
             if 'Success' in req and req['Success'] is True:
                 result = req['Data']
                 error = None
@@ -46,6 +58,7 @@ class Api(object):
                 result = None
                 error = req['Error'] if 'Error' in req else 'Unknown Error'
             return (result, error)
+
         elif feature_requested in self.public:
             url = "https://www.cryptopia.co.nz/Api/" + feature_requested + "/" + \
                   ('/'.join(i for i in list(get_parameters.values())
@@ -56,8 +69,19 @@ class Api(object):
                 try:
                     req.raise_for_status()
                 except requests.exceptions.RequestException as ex:
-                    return None, "Status Code : " + str(ex)
-            req = req.json()
+                    retry += 1
+                    if retry <= MAX_TRY:
+                        return self.api_query(feature_requested, get_parameters=get_parameters, post_parameters=post_parameters, retry=retry)
+                    else:
+                        return None, "Status Code : " + str(ex)
+            try:
+                req = req.json()
+            except ValueError:
+                retry += 1
+                if retry <= MAX_TRY:
+                    return self.api_query(feature_requested, get_parameters=get_parameters, post_parameters=post_parameters, retry=retry)
+                else:
+                    return None, "Server Response : " + req.text
             if 'Success' in req and req['Success'] is True:
                 result = req['Data']
                 error = None
