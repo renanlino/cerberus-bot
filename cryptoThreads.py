@@ -1,7 +1,7 @@
 import threading
 import time
 from cryptopia import Api
-from datetime import datetime
+from datetime import datetime, timedelta
 from queue import Queue
 
 class operator(threading.Thread):
@@ -111,7 +111,7 @@ class orderMonitor(threading.Thread):
       self.mktCode = mktCode
       self.lock = threading.Lock()
       self.stopRunning = threading.Event()
-      self.start_date = datetime.utcnow()
+      self.start_date = datetime.utcnow() - timedelta(seconds=60)
       self.tradeQueue = Queue(10)
       self.processedIDs = []
 
