@@ -38,10 +38,12 @@ def activationAssistant():
         activationFile = open("key.json", "w")
     except IOError:
         print("[X] Não foi possível gravar os dados de acesso!")
+        return False
 
     activationObj = {"key":key}
     json.dump(activationObj, activationFile)
     activationFile.close()
+    return True
 
 def runActivation():
     try:
@@ -54,8 +56,8 @@ def runActivation():
     try:
         activationObj = json.load(activationFile)
     except ValueError:
-        print("[X] Erro ao parsear o conteúdo de secrets.json")
-        sys.exit(1)
+        print("[X] Erro ao parsear o conteúdo de key.json")
+        return False
 
     activationFile.close()
 
@@ -63,14 +65,13 @@ def runActivation():
         r = requests.post("https://crypto-backend.herokuapp.com/keys/", data=activationObj)
     except IOError:
         print("[X] Erro ao acessar a rede para ativação.")
-        sys.exit(1)
+        return False
 
     if r.status_code != 200:
         print("[X] Falha na ativação.")
-        print(r)
-        sys.exit(1)
+        return False
     else:
-        return
+        return True
 
 def readSecrets():
     try:
@@ -199,13 +200,13 @@ def setup():
 
     pumpRate = input("ACRÉSCIMO PERCENTUAL sobre o preço de compra (padrão = 0): ")
     if pumpRate == "":
-        pumpRate = 0
+        pumpRate = "0"
     pumpRate = pumpRate.replace("%","").replace(" ","").replace(",",".")
     pumpRate = 1 + float(pumpRate)/100
 
     targetRate = input("ACRÉSCIMO PERCENTUAL ALVO (padrão = 30): ")
     if targetRate == "":
-        targetRate = 30
+        targetRate = "30"
     targetRate = targetRate.replace("%","").replace(" ","").replace(",",".")
     targetRate = 1 + float(targetRate)/100
 
@@ -220,22 +221,23 @@ BASE_COIN = "BTC"
 EX_FEE = 0.2/100
 threads = []
 
-runActivation()
+if runActivation():
+    secrets = readSecrets()
+    if secrets != {}:
+        print("[+] Configurando credenciais de acesso...")
+        api_key = secrets["cryptopia"]["api_key"]
+        api_secret = secrets["cryptopia"]["api_secret"]
 
-secrets = readSecrets()
-if secrets != {}:
-    print("[+] Configurando credenciais de acesso...")
-    api_key = secrets["cryptopia"]["api_key"]
-    api_secret = secrets["cryptopia"]["api_secret"]
+        exchange = Api(api_key, api_secret)
 
-    exchange = Api(api_key, api_secret)
+        mktsUpdater = marketsUpdate(api_key, api_secret)
+        threads.append(mktsUpdater)
+        mktsUpdater.start()
 
-    mktsUpdater = marketsUpdate(api_key, api_secret)
-    threads.append(mktsUpdater)
-    mktsUpdater.start()
+        print("[+] Obtendo mercados...")
+        while(not mktsUpdater.success.is_set()):
+            time.sleep(0.1)
 
-    print("[+] Obtendo mercados...")
-    while(not mktsUpdater.success.is_set()):
-        time.sleep(0.1)
+        setup()
 
-    setup()
+input()

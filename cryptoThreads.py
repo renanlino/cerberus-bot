@@ -42,7 +42,6 @@ class operator(threading.Thread):
             if error is not None:
                 print("\t[X] " + error)
                 self.kill_all()
-                return
             else:
                 print("\t[!] Ordem lançada")
 
