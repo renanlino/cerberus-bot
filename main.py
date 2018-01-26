@@ -128,8 +128,8 @@ def waitForSignal(pumpBalance, pumpRate, targetRate):
     print("============== ESPERANDO SINAL ==============")
     print()
     print("Valor disponível: %f%s" %(pumpBalance, BASE_COIN))
-    print("Preço de Entrada: %.3f%% do ASK" %(100*pumpRate))
-    print("Alvo de Saída: %.3f%%" %(100*(targetRate-1)))
+    print("Preço de Entrada: %+.3f%% do ASK" %(100*(pumpRate-1)))
+    print("Alvo de Saída: %+.3f%%" %(100*(targetRate-1)))
     print()
     if LIVE:
         print("[!] ATENÇÃO: Ao fornecer o código da moeda as ordens serão colocadas automaticamente")
@@ -176,8 +176,8 @@ def setup():
     balance_obj, error = exchange.get_balance(BASE_COIN)
     if error is None:
         print("%s:" %(BASE_COIN))
-        print("\tTOTAL: %f" %(balance_obj["Total"]) )
-        print("\tDISPO: %f" %(balance_obj["Available"]) )
+        print("\tTOTAL: %.8f" %(balance_obj["Total"]) )
+        print("\tDISPO: %.8f" %(balance_obj["Available"]) )
     else:
         print("[X] " + error)
         return
