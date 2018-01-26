@@ -7,6 +7,7 @@ import threading
 import copy
 from datetime import datetime
 import signal
+import requests
 
 def signal_handler(signal, frame):
         print('Saindo')
@@ -15,6 +16,62 @@ def signal_handler(signal, frame):
         sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
+
+def activationAssistant():
+    print("Esse assistente vai te guiar pela ativação")
+    print("do bot.")
+    print()
+    print("VOCÊ PRECISA EXECUTAR ESTE PROGRAMA COMO ADMINISTRADOR")
+    print("ANTES DE CONTINUAR!")
+    print()
+    key = input("Cole o valor da chave de ativação recebida: ")
+    print()
+    print("[!][!][!] ATENÇÃO [!][!][!]")
+    print("Este programa vai criar um arquivo local com a sua")
+    print("chave de ativação.")
+    print("Mantenha esse arquivo em segurança e jamais compartilhe")
+    print("seu conteúdo!")
+    input("Pressione ENTER para salvar e continuar")
+    print()
+
+    try:
+        activationFile = open("key.json", "w")
+    except IOError:
+        print("[X] Não foi possível gravar os dados de acesso!")
+        return False
+
+    activationObj = {"key":key}
+    json.dump(activationObj, activationFile)
+    activationFile.close()
+    return True
+
+def runActivation():
+    try:
+        activationFile = open("key.json", "r")
+    except IOError:
+        print("[X] Erro ao abrir arquivo key.json")
+        activationAssistant()
+        return runActivation()
+
+    try:
+        activationObj = json.load(activationFile)
+    except ValueError:
+        print("[X] Erro ao parsear o conteúdo de key.json")
+        return False
+
+    activationFile.close()
+
+    try:
+        r = requests.post("https://crypto-backend.herokuapp.com/keys/", data=activationObj)
+    except IOError:
+        print("[X] Erro ao acessar a rede para ativação.")
+        return False
+
+    if r.status_code != 200:
+        print("[X] Falha na ativação.")
+        return False
+    else:
+        return True
 
 def readSecrets():
     try:
@@ -71,8 +128,8 @@ def waitForSignal(pumpBalance, pumpRate, targetRate):
     print("============== ESPERANDO SINAL ==============")
     print()
     print("Valor disponível: %f%s" %(pumpBalance, BASE_COIN))
-    print("Preço de Entrada: %.3f%% do ASK" %(100*pumpRate))
-    print("Alvo de Saída: %.3f%%" %(100*(targetRate-1)))
+    print("Preço de Entrada: %+.3f%% do ASK" %(100*(pumpRate-1)))
+    print("Alvo de Saída: %+.3f%%" %(100*(targetRate-1)))
     print()
     if LIVE:
         print("[!] ATENÇÃO: Ao fornecer o código da moeda as ordens serão colocadas automaticamente")
@@ -119,8 +176,8 @@ def setup():
     balance_obj, error = exchange.get_balance(BASE_COIN)
     if error is None:
         print("%s:" %(BASE_COIN))
-        print("\tTOTAL: %f" %(balance_obj["Total"]) )
-        print("\tDISPO: %f" %(balance_obj["Available"]) )
+        print("\tTOTAL: %.8f" %(balance_obj["Total"]) )
+        print("\tDISPO: %.8f" %(balance_obj["Available"]) )
     else:
         print("[X] " + error)
         return
@@ -134,18 +191,23 @@ def setup():
         LIVE = True
         print("\t[!] MODO DE TESTES DESATIVADO")
 
-    pumpBalance = float(input("Digite O VALOR PERCENTUAL que será aplicado no pump: "))/100
+    pumpBalance = input("Digite O VALOR PERCENTUAL que será investido no pump: ")
+    pumpBalance = pumpBalance.replace("%","").replace(" ","").replace(",",".")
+    pumpBalance = float(pumpBalance)/100
+
     pumpBalance = balance_obj["Available"]*pumpBalance*(1-EX_FEE)
-    print("\tVocê entrará no pump com %f %s (descontadas as taxas)" %(pumpBalance, BASE_COIN))
+    print("\tVocê entrará no pump com %.8f %s (descontadas as taxas)" %(pumpBalance, BASE_COIN))
 
     pumpRate = input("ACRÉSCIMO PERCENTUAL sobre o preço de compra (padrão = 0): ")
     if pumpRate == "":
-        pumpRate = 0
+        pumpRate = "0"
+    pumpRate = pumpRate.replace("%","").replace(" ","").replace(",",".")
     pumpRate = 1 + float(pumpRate)/100
 
     targetRate = input("ACRÉSCIMO PERCENTUAL ALVO (padrão = 30): ")
     if targetRate == "":
-        targetRate = 30
+        targetRate = "30"
+    targetRate = targetRate.replace("%","").replace(" ","").replace(",",".")
     targetRate = 1 + float(targetRate)/100
 
     waitForSignal(pumpBalance, pumpRate, targetRate)
@@ -159,20 +221,23 @@ BASE_COIN = "BTC"
 EX_FEE = 0.2/100
 threads = []
 
-secrets = readSecrets()
-if secrets != {}:
-    print("[+] Configurando credenciais de acesso...")
-    api_key = secrets["cryptopia"]["api_key"]
-    api_secret = secrets["cryptopia"]["api_secret"]
+if runActivation():
+    secrets = readSecrets()
+    if secrets != {}:
+        print("[+] Configurando credenciais de acesso...")
+        api_key = secrets["cryptopia"]["api_key"]
+        api_secret = secrets["cryptopia"]["api_secret"]
 
-    exchange = Api(api_key, api_secret)
+        exchange = Api(api_key, api_secret)
 
-    mktsUpdater = marketsUpdate(api_key, api_secret)
-    threads.append(mktsUpdater)
-    mktsUpdater.start()
+        mktsUpdater = marketsUpdate(api_key, api_secret)
+        threads.append(mktsUpdater)
+        mktsUpdater.start()
 
-    print("[+] Obtendo mercados...")
-    while(not mktsUpdater.success.is_set()):
-        time.sleep(0.1)
+        print("[+] Obtendo mercados...")
+        while(not mktsUpdater.success.is_set()):
+            time.sleep(0.1)
 
-    setup()
+        setup()
+
+input()
