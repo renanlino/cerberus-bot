@@ -23,6 +23,7 @@ class operator(threading.Thread):
         self.marketID = marketID
         self.stopRunning = threading.Event()
         self.pumpBalance = self.buyRate*self.numCoins
+        self.execEvent = threading.Event()
 
     def kill_all(self):
         for t in self.threads:
@@ -39,7 +40,8 @@ class operator(threading.Thread):
         if self.LIVE:
             tradeMonitor.start()
 
-        pumper = buyer(self.api_key, self.api_secret, self.marketCode, self.numCoins, self.buyRate)
+        self.execEvent.clear()
+        pumper = buyer(self.api_key, self.api_secret, self.marketCode, self.numCoins, self.buyRate, self.execEvent)
         self.threads.append(pumper)
         if self.LIVE:
             pumper.start()
@@ -59,19 +61,21 @@ class operator(threading.Thread):
                 spent += trade[1]*trade[0]
             if locked:
                 tradeMonitor.lock.release()
-                try:
-                    orders, error = self.exchange.get_openorders(self.marketCode)
-                except:
-                    print("[X] operator: get_openorders exception")
-                if error is None:
-                    foundBuyOrder = False
-                    for order in orders:
-                        if order["Type"] == "Buy":
-                            foundBuyOrder = True
+                foundBuyOrder = False
+                if not self.execEvent.is_set():
+                    try:
+                        orders, error = self.exchange.get_openorders(self.marketCode)
+                    except:
+                        print("[X] operator: get_openorders exception")
+                    if error is None:
+                        for order in orders:
+                            if order["Type"] == "Buy":
+                                foundBuyOrder = True
                     if not foundBuyOrder and spent + MIN_TRADE < self.pumpBalance:
                         self.pumpBalance -= spent
                         self.numCoins = self.pumpBalance / self.buyRate
-                        pumper = buyer(self.api_key, self.api_secret, self.marketCode, self.numCoins, self.buyRate)
+                        self.execEvent.clear()
+                        pumper = buyer(self.api_key, self.api_secret, self.marketCode, self.numCoins, self.buyRate, self.execEvent)
                         self.threads.append(pumper)
                         pumper.start()
                 else:
@@ -179,7 +183,7 @@ class seller(threading.Thread):
             print("\t[!] seller: Ordem lançada (após %dms)" %elapsedMilis )
 
 class buyer(threading.Thread):
-    def __init__(self, api_key, api_secret, mktCode, numCoins, buyRate):
+    def __init__(self, api_key, api_secret, mktCode, numCoins, buyRate, execEvent):
       threading.Thread.__init__(self)
       self.exchange = Api(api_key, api_secret)
       self.mktCode = mktCode
@@ -187,6 +191,7 @@ class buyer(threading.Thread):
       self.numCoins = numCoins
       self.buyRate = buyRate
       self.stopRunning = threading.Event()
+      self.execEvent = execEvent
 
     def run(self):
         print("[+] Colocando ordem: BUY %.8f %s (rate: %.8f)" %(self.numCoins, self.codeSplit[0], self.buyRate))
@@ -198,6 +203,8 @@ class buyer(threading.Thread):
             print("\t[X] buyer: " + error)
         else:
             if trade["OrderId"] is None:
+                self.execEvent.set()
                 print("\t[!] buyer: Ordem executada (após %dms)" %elapsedMilis )
             else:
+                self.execEvent.clear()
                 print("\t[!] buyer: Ordem lançada (após %dms)" %elapsedMilis )
