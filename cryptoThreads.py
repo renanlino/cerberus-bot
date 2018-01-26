@@ -71,6 +71,9 @@ class operator(threading.Thread):
                         for order in orders:
                             if order["Type"] == "Buy":
                                 foundBuyOrder = True
+                    else:
+                        foundBuyOrder = True
+                        print("[X] operator @ get_openorders: " + error)
                     if not foundBuyOrder and spent + MIN_TRADE < self.pumpBalance:
                         self.pumpBalance -= spent
                         self.numCoins = self.pumpBalance / self.buyRate
@@ -78,8 +81,6 @@ class operator(threading.Thread):
                         pumper = buyer(self.api_key, self.api_secret, self.marketCode, self.numCoins, self.buyRate, self.execEvent)
                         self.threads.append(pumper)
                         pumper.start()
-                else:
-                    print("[X] operator @ get_openorders: " + error)
 
         self.kill_all()
         return
