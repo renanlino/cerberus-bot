@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from queue import Queue
 
 class operator(threading.Thread):
-    def __init__(self, api_key, api_secret, mktCode, numCoins, buyRate, LIVE, targetRate, marketID):
+    def __init__(self, api_key, api_secret, mktCode, numCoins, buyRate, LIVE, targetRate, marketID, pumpBalance):
         threading.Thread.__init__(self)
         self.threads = []
         self.api_key = api_key
@@ -20,6 +20,7 @@ class operator(threading.Thread):
         self.targetRate = targetRate
         self.marketID = marketID
         self.stopRunning = threading.Event()
+        self.pumpBalance = pumpBalance
 
     def kill_all(self):
         for t in self.threads:
@@ -35,6 +36,12 @@ class operator(threading.Thread):
         self.threads.append(tradeMonitor)
         if self.LIVE:
             tradeMonitor.start()
+
+        while round(self.buyRate,8)*round(self.numCoins,8) > round(self.pumpBalance,8):
+            self.numCoins *= 0.99
+        self.buyRate = round(self.buyRate,8)
+        self.numCoins = round(self.numCoins,8)
+        self.pumpBalance = round(self.pumpBalance,8)
 
         print("[+] Colocando ordem: BUY %.8f %s (rate: %.8f)" %(self.numCoins, self.coinCode, self.buyRate))
         if self.LIVE:

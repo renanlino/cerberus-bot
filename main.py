@@ -127,9 +127,9 @@ def waitForSignal(pumpBalance, pumpRate, targetRate):
     print()
     print("============== ESPERANDO SINAL ==============")
     print()
-    print("Valor disponível: %f%s" %(pumpBalance, BASE_COIN))
-    print("Preço de Entrada: %.3f%% do ASK" %(100*pumpRate))
-    print("Alvo de Saída: %.3f%%" %(100*(targetRate-1)))
+    print("Valor disponível: %.8f %s" %(pumpBalance, BASE_COIN))
+    print("Preço de Entrada: %+.3f%% do ASK" %(100*(pumpRate-1)))
+    print("Alvo de Saída: %+.3f%%" %(100*(targetRate-1)))
     print()
     if LIVE:
         print("[!] ATENÇÃO: Ao fornecer o código da moeda as ordens serão colocadas automaticamente")
@@ -147,7 +147,11 @@ def waitForSignal(pumpBalance, pumpRate, targetRate):
         coinCode = coinCode.upper().replace(" ","")
         marketCode = coinCode + "/" + BASE_COIN
 
-        mkt = copy.deepcopy( mktsUpdater.markets[marketCode] )
+        try:
+            mkt = copy.deepcopy( mktsUpdater.markets[marketCode] )
+        except KeyError:
+            print("[X] Moeda %s não encontrada." %coinCode)
+            continue
 
         marketID = str(mkt["TradePairId"])
         print(marketCode)
@@ -156,9 +160,10 @@ def waitForSignal(pumpBalance, pumpRate, targetRate):
         print("\tCNG: %+.2f%%" %(mkt["Change"]))
 
         buyRate = mkt["AskPrice"]*pumpRate
-        numCoins = pumpBalance / (len(coinCodes)*buyRate)
+        thisPumpBalance = pumpBalance/len(coinCodes)
+        numCoins = thisPumpBalance / buyRate
 
-        pdAgent = operator(api_key, api_secret, marketCode, numCoins, buyRate, LIVE, targetRate, marketID)
+        pdAgent = operator(api_key, api_secret, marketCode, numCoins, buyRate, LIVE, targetRate, marketID, thisPumpBalance)
         threads.append(pdAgent)
         pdAgent.start()
 
@@ -176,8 +181,8 @@ def setup():
     balance_obj, error = exchange.get_balance(BASE_COIN)
     if error is None:
         print("%s:" %(BASE_COIN))
-        print("\tTOTAL: %f" %(balance_obj["Total"]) )
-        print("\tDISPO: %f" %(balance_obj["Available"]) )
+        print("\tTOTAL: %.8f" %(balance_obj["Total"]) )
+        print("\tDISPO: %.8f" %(balance_obj["Available"]) )
     else:
         print("[X] " + error)
         return
@@ -194,6 +199,8 @@ def setup():
     pumpBalance = input("Digite O VALOR PERCENTUAL que será investido no pump: ")
     pumpBalance = pumpBalance.replace("%","").replace(" ","").replace(",",".")
     pumpBalance = float(pumpBalance)/100
+    if pumpBalance > 1:
+        pumpBalance = 1
 
     pumpBalance = balance_obj["Available"]*pumpBalance*(1-EX_FEE)
     print("\tVocê entrará no pump com %.8f %s (descontadas as taxas)" %(pumpBalance, BASE_COIN))

@@ -7,14 +7,14 @@ from cx_Freeze import setup, Executable
 
 # Dependencies are automatically detected, but it might need fine tuning.
 build_exe_options = {"packages": ["os","idna"], "excludes": ["tkinter"],
-'include_msvcr': True}
+'include_msvcr': True, 'replace_paths': [("*", "")]}
 
 # GUI applications require a different base on Windows (the default is for a
 # console application).
 base = None
 
 setup(  name = "Cryptopia Pump and Dump Bot",
-        version = "0.1",
+        version = "0.11",
         description = "Pump and Dump Semi-Auto Assistant",
         options = {"build_exe": build_exe_options},
         executables = [Executable("main.py", base=base, shortcutName="Cryptopia Bot",
