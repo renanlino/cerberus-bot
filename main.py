@@ -123,7 +123,7 @@ def secretsAssistant():
     json.dump(secretsObj, secretsFile)
     secretsFile.close()
 
-def waitForSignal(pumpBalance, pumpRate, targetRate):
+def waitForSignal(pumpBalance, pumpRate, targetRate, changeLimit):
     print()
     print("============== ESPERANDO SINAL ==============")
     print()
@@ -158,6 +158,12 @@ def waitForSignal(pumpBalance, pumpRate, targetRate):
         print("\tASK: %.8f" %(mkt["AskPrice"]))
         print("\tBID: %.8f" %(mkt["BidPrice"]))
         print("\tCNG: %+.2f%%" %(mkt["Change"]))
+
+        if changeLimit is not None and mkt["Change"] > changeLimit:
+            print()
+            print("[!][!] ATENÇÃO [!][!]")
+            print("A valorização atual da moeda é de %+.2f%%" %mkt["Change"])
+            input("Pressione ENTER para continuar com a compra.")
 
         buyRate = mkt["AskPrice"]*pumpRate
         thisPumpBalance = pumpBalance/len(coinCodes)
@@ -217,7 +223,14 @@ def setup():
     targetRate = targetRate.replace("%","").replace(" ","").replace(",",".")
     targetRate = 1 + float(targetRate)/100
 
-    waitForSignal(pumpBalance, pumpRate, targetRate)
+    changeLimit = input("LIMITE de valorização prévia (padrão = desativado): ")
+    if changeLimit == "":
+        changeLimit = None
+    else:
+        changeLimit = changeLimit.replace("%","").replace(" ","").replace(",",".")
+        changeLimit = float(changeLimit)
+
+    waitForSignal(pumpBalance, pumpRate, targetRate, changeLimit)
 
 """""
 CONFIGURAÇÃO E INICIALIZAÇÃO
