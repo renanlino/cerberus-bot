@@ -44,13 +44,21 @@ class operator(threading.Thread):
         self.pumpBalance = round(self.pumpBalance,8)
 
         print("[+] Colocando ordem: BUY %.8f %s (rate: %.8f)" %(self.numCoins, self.coinCode, self.buyRate))
+        start = time.perf_counter()
         if self.LIVE:
             trade, error = self.exchange.submit_trade(self.marketCode, 'Buy', self.buyRate, self.numCoins)
+            end = time.perf_counter()
+            elapsedMilis = int((end-start)*1000)
             if error is not None:
-                print("\t[X] " + error)
+                print("\t[X] buyer: " + error)
                 self.kill_all()
             else:
-                print("\t[!] Ordem lançada")
+                if trade["OrderId"] is None:
+                    #self.execEvent.set()
+                    print("\t[!] buyer: Ordem EXECUTADA (após %dms)" %elapsedMilis )
+                else:
+                    #self.execEvent.clear()
+                    print("\t[!] buyer: Ordem LANÇADA (após %dms)" %elapsedMilis )
 
         while(not self.stopRunning.is_set()):
             if not tradeMonitor.tradeQueue.empty():
@@ -102,14 +110,17 @@ class marketUpdate(threading.Thread):
       self.stopRunning = threading.Event()
 
     def run(self):
+        start = time.perf_counter()
         while(not self.stopRunning.is_set()):
             market_obj, error = self.exchange.get_market(self.mktID)
             if error is None:
                 self.lock.acquire()
                 self.market = market_obj
                 self.lock.release()
+            end = time.perf_counter()
+            elapsedSeconds = end-start
+            print("%6.3f [!] %s %.8f %+.2f%%" %(elapsedSeconds, self.market["Label"], self.market["AskPrice"], self.market["Change"]))
             time.sleep(0.5)
-            print("[!] %s %.8f %+.2f%%" %(self.market["Label"], self.market["AskPrice"], self.market["Change"]))
 
 class orderMonitor(threading.Thread):
     def __init__(self, api_key, api_secret, mktCode):
@@ -145,8 +156,11 @@ class seller(threading.Thread):
 
     def run(self):
         print("[+] Colocando ordem: SELL %.8f %s (rate: %.8f)" %(self.sellCoins, self.codeSplit[0], self.sellRate))
+        start = time.perf_counter()
         trade, error = self.exchange.submit_trade(self.mktCode, 'Sell', self.sellRate, self.sellCoins)
+        end = time.perf_counter()
+        elapsedMilis = int((end-start)*1000)
         if error is not None:
-            print("\t[X] " + error)
+            print("\tseller: [X] " + error)
         else:
-            print("\t[!] Ordem lançada")
+            print("\t[!] seller: Ordem lançada (após %dms)" %elapsedMilis )

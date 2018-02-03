@@ -154,6 +154,8 @@ def waitForSignal(pumpBalance, pumpRate, targetRate, changeLimit):
             continue
 
         marketID = str(mkt["TradePairId"])
+        timestamp = datetime.now()
+        print(timestamp)
         print(marketCode)
         print("\tASK: %.8f" %(mkt["AskPrice"]))
         print("\tBID: %.8f" %(mkt["BidPrice"]))
