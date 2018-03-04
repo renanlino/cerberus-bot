@@ -14,7 +14,7 @@ build_exe_options = {"packages": ["os","idna"], "excludes": ["tkinter"],
 base = None
 
 setup(  name = "Cryptopia Pump and Dump Bot",
-        version = "0.11",
+        version = "0.2",
         description = "Pump and Dump Semi-Auto Assistant",
         options = {"build_exe": build_exe_options},
         executables = [Executable("main.py", base=base, shortcutName="Cryptopia Bot",
