@@ -123,11 +123,11 @@ def secretsAssistant():
     json.dump(secretsObj, secretsFile)
     secretsFile.close()
 
-def waitForSignal(pumpBalance, pumpRate, targetRate):
+def waitForSignal(pumpBalance, pumpRate, targetRate, changeLimit):
     print()
     print("============== ESPERANDO SINAL ==============")
     print()
-    print("Valor disponível: %f%s" %(pumpBalance, BASE_COIN))
+    print("Valor disponível: %.8f %s" %(pumpBalance, BASE_COIN))
     print("Preço de Entrada: %+.3f%% do ASK" %(100*(pumpRate-1)))
     print("Alvo de Saída: %+.3f%%" %(100*(targetRate-1)))
     print()
@@ -147,18 +147,31 @@ def waitForSignal(pumpBalance, pumpRate, targetRate):
         coinCode = coinCode.upper().replace(" ","")
         marketCode = coinCode + "/" + BASE_COIN
 
-        mkt = copy.deepcopy( mktsUpdater.markets[marketCode] )
+        try:
+            mkt = copy.deepcopy( mktsUpdater.markets[marketCode] )
+        except KeyError:
+            print("[X] Moeda %s não encontrada." %coinCode)
+            continue
 
         marketID = str(mkt["TradePairId"])
+        timestamp = datetime.now()
+        print(timestamp)
         print(marketCode)
         print("\tASK: %.8f" %(mkt["AskPrice"]))
         print("\tBID: %.8f" %(mkt["BidPrice"]))
         print("\tCNG: %+.2f%%" %(mkt["Change"]))
 
-        buyRate = mkt["AskPrice"]*pumpRate
-        numCoins = pumpBalance / (len(coinCodes)*buyRate)
+        if changeLimit is not None and mkt["Change"] > changeLimit:
+            print()
+            print("[!][!] ATENÇÃO [!][!]")
+            print("A valorização atual da moeda é de %+.2f%%" %mkt["Change"])
+            input("Pressione ENTER para continuar com a compra.")
 
-        pdAgent = operator(api_key, api_secret, marketCode, numCoins, buyRate, LIVE, targetRate, marketID)
+        buyRate = mkt["AskPrice"]*pumpRate
+        thisPumpBalance = pumpBalance/len(coinCodes)
+        numCoins = thisPumpBalance / buyRate
+
+        pdAgent = operator(api_key, api_secret, marketCode, numCoins, buyRate, LIVE, targetRate, marketID, thisPumpBalance)
         threads.append(pdAgent)
         pdAgent.start()
 
@@ -194,6 +207,8 @@ def setup():
     pumpBalance = input("Digite O VALOR PERCENTUAL que será investido no pump: ")
     pumpBalance = pumpBalance.replace("%","").replace(" ","").replace(",",".")
     pumpBalance = float(pumpBalance)/100
+    if pumpBalance > 1:
+        pumpBalance = 1
 
     pumpBalance = balance_obj["Available"]*pumpBalance*(1-EX_FEE)
     print("\tVocê entrará no pump com %.8f %s (descontadas as taxas)" %(pumpBalance, BASE_COIN))
@@ -210,7 +225,14 @@ def setup():
     targetRate = targetRate.replace("%","").replace(" ","").replace(",",".")
     targetRate = 1 + float(targetRate)/100
 
-    waitForSignal(pumpBalance, pumpRate, targetRate)
+    changeLimit = input("LIMITE de valorização prévia (padrão = desativado): ")
+    if changeLimit == "":
+        changeLimit = None
+    else:
+        changeLimit = changeLimit.replace("%","").replace(" ","").replace(",",".")
+        changeLimit = float(changeLimit)
+
+    waitForSignal(pumpBalance, pumpRate, targetRate, changeLimit)
 
 """""
 CONFIGURAÇÃO E INICIALIZAÇÃO

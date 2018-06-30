@@ -7,7 +7,7 @@ from queue import Queue
 MIN_TRADE = 0.00050000
 
 class operator(threading.Thread):
-    def __init__(self, api_key, api_secret, mktCode, numCoins, buyRate, LIVE, targetRate, marketID):
+    def __init__(self, api_key, api_secret, mktCode, numCoins, buyRate, LIVE, targetRate, marketID, pumpBalance):
         threading.Thread.__init__(self)
         self.threads = []
         self.api_key = api_key
@@ -40,11 +40,28 @@ class operator(threading.Thread):
         if self.LIVE:
             tradeMonitor.start()
 
-        self.execEvent.clear()
-        pumper = buyer(self.api_key, self.api_secret, self.marketCode, self.numCoins, self.buyRate, self.execEvent)
-        self.threads.append(pumper)
+        while round(self.buyRate,8)*round(self.numCoins,8) > round(self.pumpBalance,8):
+            self.numCoins *= 0.99
+        self.buyRate = round(self.buyRate,8)
+        self.numCoins = round(self.numCoins,8)
+        self.pumpBalance = round(self.pumpBalance,8)
+
+        print("[+] Colocando ordem: BUY %.8f %s (rate: %.8f)" %(self.numCoins, self.coinCode, self.buyRate))
+        start = time.perf_counter()
         if self.LIVE:
-            pumper.start()
+            trade, error = self.exchange.submit_trade(self.marketCode, 'Buy', self.buyRate, self.numCoins)
+            end = time.perf_counter()
+            elapsedMilis = int((end-start)*1000)
+            if error is not None:
+                print("\t[X] buyer: " + error)
+                self.kill_all()
+            else:
+                if trade["OrderId"] is None:
+                    #self.execEvent.set()
+                    print("\t[!] buyer: Ordem EXECUTADA (após %dms)" %elapsedMilis )
+                else:
+                    #self.execEvent.clear()
+                    print("\t[!] buyer: Ordem LANÇADA (após %dms)" %elapsedMilis )
 
         spent = 0
         while(not self.stopRunning.is_set()):
