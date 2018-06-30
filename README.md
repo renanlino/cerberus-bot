@@ -2,6 +2,10 @@
 
 Bot semi-automático de operação Pump&Dump com suporte Multithread para a exchange Cryptopia
 
+# ATENÇÃO #
+
+Este software é experimental. Use com cautela.
+
 ## Features ##
 - Configuração de margem de pump inicial
 - Configuração de meta de ganho percentual
